@@ -1,0 +1,8 @@
+[package]
+name = "lba1-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.45"
+byteorder = "1.4.3"
