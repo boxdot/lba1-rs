@@ -1,4 +1,5 @@
 use crate::lib3d::func::cross_mult_32;
+use crate::sdl_engine::{delay_ms, SdlEngine};
 
 const PALETTE_WIDTH: usize = 768;
 
@@ -16,7 +17,7 @@ impl Default for Palette {
 }
 
 #[allow(clippy::identity_op)]
-fn fade_pal(r: u8, g: u8, b: u8, pal: &Palette, percent: u32) -> Palette {
+fn fade_pal(engine: &mut SdlEngine, r: u8, g: u8, b: u8, pal: &Palette, percent: u32) {
     let mut workpal = Palette::default();
     for n in 0..256 {
         workpal.data[n * 3 + 0] =
@@ -26,5 +27,21 @@ fn fade_pal(r: u8, g: u8, b: u8, pal: &Palette, percent: u32) -> Palette {
         workpal.data[n * 3 + 2] =
             cross_mult_32(b.into(), pal.data[n * 3 + 2].into(), 100, percent) as u8;
     }
-    workpal
+    engine.palette(&workpal);
+}
+
+pub fn white_fade(engine: &mut SdlEngine) {
+    let mut pal = Palette::default();
+    for n in 0..255 {
+        pal.data.fill(n);
+        engine.palette(&pal);
+        delay_ms(10);
+    }
+}
+
+pub fn fade_white_to_pal(engine: &mut SdlEngine, pal: &Palette) {
+    for n in 0..100 {
+        fade_pal(engine, 255, 255, 255, pal, n);
+        delay_ms(10);
+    }
 }

@@ -26,17 +26,15 @@ pub fn decompress_lzs(src: &[u8], dst: &mut [u8]) {
             if offset == 0 {
                 let data = dst[data_idx];
                 dst[dst_idx..dst_idx + len].fill(data);
-            } else {
-                if dst_idx <= data_idx + len {
-                    // overlapping
-                    for idx in 0..len {
-                        dst[dst_idx + idx] = dst[data_idx + idx];
-                    }
-                } else {
-                    // non-overlapping
-                    let (lhs, rhs) = dst.split_at_mut(dst_idx);
-                    rhs[0..len].copy_from_slice(&lhs[data_idx..data_idx + len]);
+            } else if dst_idx <= data_idx + len {
+                // overlapping
+                for idx in 0..len {
+                    dst[dst_idx + idx] = dst[data_idx + idx];
                 }
+            } else {
+                // non-overlapping
+                let (lhs, rhs) = dst.split_at_mut(dst_idx);
+                rhs[0..len].copy_from_slice(&lhs[data_idx..data_idx + len]);
             }
             dst_idx += len;
             decompressed_len -= len;
