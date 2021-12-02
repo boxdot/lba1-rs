@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -7,7 +7,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::libsys::decompress_lzs;
 
 pub fn load_hqr(path: impl AsRef<Path>, buffer: &mut [u8], index: usize) -> io::Result<usize> {
-    let mut file = File::open(path)?;
+    let mut file = BufReader::new(File::open(path.as_ref())?);
 
     let num_blocks = file.read_u32::<LittleEndian>()? as usize / 4;
     if num_blocks <= index {
@@ -33,7 +33,7 @@ pub fn load_hqr(path: impl AsRef<Path>, buffer: &mut [u8], index: usize) -> io::
             // in the original source code.
             let mut compressed_buffer = vec![0; header.compressed_size_file];
             file.read_exact(&mut compressed_buffer)?;
-            decompress_lzs(&compressed_buffer, &mut buffer[0..header.size_file])?;
+            decompress_lzs(&compressed_buffer, &mut buffer[0..header.size_file]);
         }
     }
 
