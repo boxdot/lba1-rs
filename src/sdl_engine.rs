@@ -88,6 +88,10 @@ impl SdlEngine {
             .unwrap();
         screen_surface.finish().unwrap();
     }
+
+    pub fn set_black_pal(&mut self) {
+        self.palette(&Palette::default());
+    }
 }
 
 pub fn delay_ms(ms: u64) {

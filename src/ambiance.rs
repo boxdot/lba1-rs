@@ -1,3 +1,4 @@
+use crate::gamemenu::Game;
 use crate::lib3d::func::cross_mult_32;
 use crate::sdl_engine::{delay_ms, SdlEngine};
 
@@ -44,4 +45,29 @@ pub fn fade_white_to_pal(engine: &mut SdlEngine, pal: &Palette) {
         fade_pal(engine, 255, 255, 255, pal, n);
         delay_ms(10);
     }
+}
+
+pub fn fade_to_black<'a, 'b>(game: &'a mut Game, pal: impl Into<Option<&'b Palette>>) {
+    if !game.global.flag_black_pal {
+        let pal = pal.into().unwrap_or(&game.global.palette_pcx);
+        for n in (0..=100).rev().step_by(2) {
+            fade_pal(&mut game.engine, 0, 0, 0, pal, n);
+            delay_ms(10);
+        }
+    }
+    game.global.flag_black_pal = true;
+}
+
+pub fn set_black_pal(game: &mut Game) {
+    game.engine.set_black_pal();
+    game.global.flag_black_pal = true;
+}
+
+pub fn fade_to_pal<'a, 'b>(game: &'a mut Game, pal: impl Into<Option<&'b Palette>>) {
+    let pal = pal.into().unwrap_or(&game.global.palette_pcx);
+    for n in (0..100).step_by(2) {
+        fade_pal(&mut game.engine, 0, 0, 0, pal, n);
+        delay_ms(10);
+    }
+    game.global.flag_black_pal = false;
 }
