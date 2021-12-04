@@ -1,11 +1,8 @@
+use std::path::PathBuf;
 use std::thread::sleep;
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use crate::ambiance::fade_to_pal;
-use crate::ambiance::fade_white_to_pal;
-use crate::ambiance::set_black_pal;
-use crate::ambiance::white_fade;
+use crate::ambiance::{fade_to_pal, fade_white_to_pal, set_black_pal, white_fade};
 use crate::common;
 use crate::global::Global;
 use crate::hqr_ress::load_hqr;
@@ -18,6 +15,8 @@ use anyhow::Context as _;
 pub struct Game {
     pub engine: SdlEngine,
 
+    pub root: PathBuf,
+
     screen: Screen,
     log: Screen,
 
@@ -25,9 +24,11 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(engine: SdlEngine) -> Self {
+    pub fn new(root: impl Into<PathBuf>, engine: SdlEngine) -> Self {
         Self {
             engine,
+
+            root: root.into(),
 
             screen: Default::default(),
             log: Default::default(),
@@ -37,15 +38,19 @@ impl Game {
     }
 
     pub fn adeline_logo(&mut self) -> anyhow::Result<()> {
-        load_hqr("RESS.HQR", &mut self.screen.data, common::RESS_LOGO_PCR)
-            .context("failed to load logo pcr from RESS.HQR")?;
+        load_hqr(
+            self.root.join("ress.hqr"),
+            &mut self.screen.data,
+            common::RESS_LOGO_PCR,
+        )
+        .context("failed to load logo pcr from ress.hqr")?;
         self.screen.copy_to(&mut self.log);
         load_hqr(
-            "RESS.HQR",
+            self.root.join("ress.hqr"),
             &mut self.global.palette_pcx.data,
             common::RESS_LOGO_PAL,
         )
-        .context("failed to load logo palette from RESS.HQR")?;
+        .context("failed to load logo palette from ress.hqr")?;
         white_fade(&mut self.engine);
         flip(self);
         fade_white_to_pal(&mut self.engine, &self.global.palette_pcx);
@@ -60,9 +65,13 @@ pub fn flip(game: &mut Game) {
 
 pub fn ress_pict(game: &mut Game, index: usize) -> anyhow::Result<()> {
     set_black_pal(game);
-    load_hqr("RESS.HQR", &mut game.screen.data, index)?;
+    load_hqr(game.root.join("ress.hqr"), &mut game.screen.data, index)?;
     game.screen.copy_to(&mut game.log);
-    load_hqr("RESS.HQR", &mut game.global.palette_pcx.data, index + 1)?;
+    load_hqr(
+        game.root.join("ress.hqr"),
+        &mut game.global.palette_pcx.data,
+        index + 1,
+    )?;
     flip(game);
     fade_to_pal(game, None);
     Ok(())

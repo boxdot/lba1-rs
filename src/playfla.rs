@@ -10,7 +10,7 @@ pub fn play_anim_fla(game: &mut Game, name: &str) -> io::Result<()> {
 }
 
 fn play_disk_fla(game: &mut Game, name: &str) -> io::Result<()> {
-    let txt = load_hqrm("RESS.HQR", RESS_FLA_PCX)?;
+    let txt = load_hqrm(game.root.join("ress.hqr"), RESS_FLA_PCX)?;
 
     let name = name.splitn(2, '.').next().unwrap();
 
