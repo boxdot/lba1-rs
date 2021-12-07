@@ -47,15 +47,22 @@ pub fn fade_white_to_pal(engine: &mut SdlEngine, pal: &Palette) {
     }
 }
 
-pub fn fade_to_black<'a, 'b>(game: &'a mut Game, pal: impl Into<Option<&'b Palette>>) {
-    if !game.global.flag_black_pal {
-        let pal = pal.into().unwrap_or(&game.global.palette_pcx);
+pub fn fade_to_black(engine: &mut SdlEngine, pal: &Palette, flag_black_pal: &mut bool) {
+    if !*flag_black_pal {
         for n in (0..=100).rev().step_by(2) {
-            fade_pal(&mut game.engine, 0, 0, 0, pal, n);
+            fade_pal(engine, 0, 0, 0, pal, n);
             delay_ms(10);
         }
     }
-    game.global.flag_black_pal = true;
+    *flag_black_pal = true;
+}
+
+pub fn fade_to_black_pcx(game: &mut Game) {
+    fade_to_black(
+        &mut game.engine,
+        &game.global.palette_pcx,
+        &mut game.global.flag_black_pal,
+    );
 }
 
 pub fn set_black_pal(game: &mut Game) {
@@ -63,11 +70,18 @@ pub fn set_black_pal(game: &mut Game) {
     game.global.flag_black_pal = true;
 }
 
-pub fn fade_to_pal<'a, 'b>(game: &'a mut Game, pal: impl Into<Option<&'b Palette>>) {
-    let pal = pal.into().unwrap_or(&game.global.palette_pcx);
+pub fn fade_to_pal(engine: &mut SdlEngine, pal: &Palette, flag_black_pal: &mut bool) {
     for n in (0..100).step_by(2) {
-        fade_pal(&mut game.engine, 0, 0, 0, pal, n);
+        fade_pal(engine, 0, 0, 0, pal, n);
         delay_ms(10);
     }
-    game.global.flag_black_pal = false;
+    *flag_black_pal = false;
+}
+
+pub fn fade_to_pal_pcx(game: &mut Game) {
+    fade_to_pal(
+        &mut game.engine,
+        &game.global.palette_pcx,
+        &mut game.global.flag_black_pal,
+    );
 }

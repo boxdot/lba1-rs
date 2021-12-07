@@ -2,10 +2,11 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-use crate::ambiance::{fade_to_pal, fade_white_to_pal, set_black_pal, white_fade};
+use crate::ambiance::{fade_to_pal_pcx, fade_white_to_pal, set_black_pal, white_fade};
 use crate::common;
 use crate::global::Global;
 use crate::hqr_ress::load_hqr;
+use crate::playfla::Fla;
 use crate::screen::Screen;
 use crate::sdl_engine::SdlEngine;
 
@@ -17,10 +18,12 @@ pub struct Game {
 
     pub root: PathBuf,
 
-    screen: Screen,
-    log: Screen,
+    pub screen: Screen,
+    pub log: Screen,
 
     pub global: Global,
+
+    pub fla: Fla,
 }
 
 impl Game {
@@ -34,6 +37,8 @@ impl Game {
             log: Default::default(),
 
             global: Default::default(),
+
+            fla: Default::default(),
         }
     }
 
@@ -73,7 +78,7 @@ pub fn ress_pict(game: &mut Game, index: usize) -> anyhow::Result<()> {
         index + 1,
     )?;
     flip(game);
-    fade_to_pal(game, None);
+    fade_to_pal_pcx(game);
     Ok(())
 }
 

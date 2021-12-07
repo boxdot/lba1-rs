@@ -1,2 +1,5 @@
 /target
 *.HQR
+/cd
+/tools
+mount.sh
