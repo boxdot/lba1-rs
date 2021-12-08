@@ -1,5 +1,5 @@
-const WIDTH: usize = 640;
-const HEIGHT: usize = 480;
+pub const WIDTH: usize = 640;
+pub const HEIGHT: usize = 480;
 
 #[derive(Debug)]
 pub struct Screen {

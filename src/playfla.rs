@@ -11,12 +11,16 @@ use crate::ambiance::{
     fade_to_black, fade_to_black_pcx, fade_to_pal, fade_to_pal_pcx, set_black_pal, Palette,
 };
 use crate::common::RESS_FLA_PCX;
-use crate::gamemenu::{flip, timer_esc, Game};
+use crate::gamemenu::{clear, flip, timer_esc, Game};
 use crate::hqr_ress::load_hqrm;
+use crate::sdl_engine::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 const FLA_FROM_CD: bool = true;
 const FLA_DIR: &str = "fla";
 const FLA_EXT: &str = "fla";
+
+const FLA_WIDTH: usize = 320;
+const FLA_HEIGHT: usize = 200;
 
 const VERSION: &str = "V1.3";
 
@@ -36,11 +40,10 @@ pub fn play_anim_fla(game: &mut Game, name: &str) -> anyhow::Result<()> {
     init_fla(&mut reader, &mut game.fla)?;
 
     if game.fla.header.version == VERSION {
-        // ExtInitMcga
         set_black_pal(game);
-        // Clear
-        // Flip
-        // Clear
+
+        clear(game);
+        flip(game);
 
         game.fla.flag_first = true;
         let frame_duration = Duration::from_millis(1000 / game.fla.header.cadence_animation as u64);
@@ -50,6 +53,7 @@ pub fn play_anim_fla(game: &mut Game, name: &str) -> anyhow::Result<()> {
             let now = Instant::now();
 
             draw_next_frame_fla(game, &mut reader)?;
+            upscale_mcga(game);
 
             flip(game);
             management_palette(game);
@@ -59,6 +63,32 @@ pub fn play_anim_fla(game: &mut Game, name: &str) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn upscale_mcga(game: &mut Game) {
+    let fla = &game.fla.buffer.data;
+    let log = &mut game.log.data;
+
+    // letterboxing
+    const WIDTH: usize = SCREEN_WIDTH as usize;
+    const HEIGHT: usize = SCREEN_HEIGHT as usize;
+    const LETTERBOX_LINES: usize = (HEIGHT - (2 * FLA_HEIGHT)) / 2;
+
+    log[0..WIDTH * LETTERBOX_LINES].fill(0);
+    log[WIDTH * 2 * FLA_HEIGHT..WIDTH * 2 * FLA_HEIGHT + LETTERBOX_LINES].fill(0);
+
+    let src_lines = fla.chunks_exact(FLA_WIDTH);
+    let dst_double_lines = log.chunks_exact_mut(2 * WIDTH).skip(LETTERBOX_LINES / 2);
+
+    for (src_line, dst_double_line) in src_lines.zip(dst_double_lines) {
+        for (color, dest) in src_line.iter().zip(dst_double_line.chunks_exact_mut(2)) {
+            dest[0] = *color;
+            dest[1] = *color;
+        }
+
+        let (a, b) = dst_double_line.split_at_mut(WIDTH);
+        b.copy_from_slice(a);
+    }
 }
 
 fn management_palette(game: &mut Game) {
@@ -88,9 +118,24 @@ pub struct Fla {
     header_sample_stop: FlaSampleStop,
     header_info: FlaInfo,
 
+    buffer: FlaScreenBuffer,
+
     color_start: usize,
     color_len: usize,
     flag_first: bool,
+}
+
+#[derive(Debug)]
+struct FlaScreenBuffer {
+    data: [u8; 320 * 200],
+}
+
+impl Default for FlaScreenBuffer {
+    fn default() -> Self {
+        Self {
+            data: [0; 320 * 200],
+        }
+    }
 }
 
 fn draw_next_frame_fla(game: &mut Game, reader: impl Read) -> io::Result<()> {
@@ -98,8 +143,6 @@ fn draw_next_frame_fla(game: &mut Game, reader: impl Read) -> io::Result<()> {
 
     let fla = &mut game.fla;
     let mut buffer = &game.screen.data[0..len];
-
-    let log = &mut game.log.data;
 
     let block_len = fla.header_block.block_len;
 
@@ -151,10 +194,15 @@ fn draw_next_frame_fla(game: &mut Game, reader: impl Read) -> io::Result<()> {
                 fla.header_sample_stop = FlaSampleStop::from_reader(&mut data)?;
                 // TODO: stop sample
             }
-            FlaTypeEnum::Lc => update_frame(log, data, 320),
-            FlaTypeEnum::Black => black_frame(log),
-            FlaTypeEnum::Brown => draw_frame(log, data, 320, fla.header.resolution_y as usize),
-            FlaTypeEnum::Copy => copy_frame(log, &data[0..320 * 200]),
+            FlaTypeEnum::Lc => update_frame(&mut fla.buffer.data, data, 320),
+            FlaTypeEnum::Black => black_frame(&mut fla.buffer.data),
+            FlaTypeEnum::Brown => draw_frame(
+                &mut fla.buffer.data,
+                data,
+                320,
+                fla.header.resolution_y as usize,
+            ),
+            FlaTypeEnum::Copy => copy_frame(&mut fla.buffer.data, &data[0..320 * 200]),
         }
 
         buffer = &buffer[header_type.offset_next_block as usize..];

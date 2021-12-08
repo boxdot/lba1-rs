@@ -8,8 +8,8 @@ use sdl2::EventPump;
 
 use crate::ambiance::Palette;
 
-const SCREEN_WIDTH: u32 = 640;
-const SCREEN_HEIGHT: u32 = 480;
+pub const SCREEN_WIDTH: u32 = 640;
+pub const SCREEN_HEIGHT: u32 = 480;
 
 pub struct SdlEngine {
     pub window_canvas: Canvas<Window>,

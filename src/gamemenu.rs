@@ -63,6 +63,10 @@ impl Game {
     }
 }
 
+pub fn clear(game: &mut Game) {
+    game.log.data.fill(0);
+}
+
 pub fn flip(game: &mut Game) {
     game.engine.copy_from_buffer(&game.log.data);
     game.engine.flip();
