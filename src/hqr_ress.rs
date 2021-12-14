@@ -7,24 +7,39 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::libsys::decompress_lzs;
 
 pub fn load_hqr(path: impl AsRef<Path>, buffer: &mut [u8], index: usize) -> io::Result<usize> {
-    let mut file = BufReader::new(File::open(path.as_ref())?);
+    let (file, header) = read_header(path, index)?;
 
-    let num_blocks = file.read_u32::<LittleEndian>()? as usize / 4;
-    if num_blocks <= index {
-        return Err(io::Error::new(io::ErrorKind::Other, "out of bounds"));
-    }
+    read_block(&header, file, buffer)?;
 
-    file.seek(SeekFrom::Start(index as u64 * 4))?;
-    let seek_index = file.read_u32::<LittleEndian>()?;
+    Ok(header.size_file)
+}
 
-    file.seek(SeekFrom::Start(seek_index.into()))?;
-    let header = Header::from_reader(&mut file)?;
+pub fn load_hqrm(path: impl AsRef<Path>, index: usize) -> io::Result<Vec<u8>> {
+    let (file, header) = read_header(path, index)?;
+    let mut buffer = vec![0; header.size_file];
 
+    read_block(&header, file, &mut buffer)?;
+
+    Ok(buffer)
+}
+
+pub fn load_hqrm_typed<R>(path: impl AsRef<Path>, index: usize) -> io::Result<R>
+where
+    R: TryFrom<Vec<u8>, Error = io::Error>,
+{
+    R::try_from(load_hqrm(path, index)?)
+}
+
+fn read_block(
+    header: &Header,
+    mut file: BufReader<File>,
+    buffer: &mut [u8],
+) -> Result<(), io::Error> {
     if buffer.len() < header.size_file {
         return Err(io::Error::new(io::ErrorKind::Other, "buffer too small"));
     }
 
-    match header.compress_method {
+    Ok(match header.compress_method {
         CompressMethod::Stored => {
             file.read_exact(&mut buffer[0..header.size_file])?;
         }
@@ -35,12 +50,13 @@ pub fn load_hqr(path: impl AsRef<Path>, buffer: &mut [u8], index: usize) -> io::
             file.read_exact(&mut compressed_buffer)?;
             decompress_lzs(&compressed_buffer, &mut buffer[0..header.size_file]);
         }
-    }
-
-    Ok(header.size_file)
+    })
 }
 
-pub fn load_hqrm(path: impl AsRef<Path>, index: usize) -> io::Result<Vec<u8>> {
+fn read_header(
+    path: impl AsRef<Path>,
+    index: usize,
+) -> Result<(BufReader<File>, Header), io::Error> {
     let mut file = BufReader::new(File::open(path.as_ref())?);
 
     let num_blocks = file.read_u32::<LittleEndian>()? as usize / 4;
@@ -54,22 +70,7 @@ pub fn load_hqrm(path: impl AsRef<Path>, index: usize) -> io::Result<Vec<u8>> {
     file.seek(SeekFrom::Start(seek_index.into()))?;
     let header = Header::from_reader(&mut file)?;
 
-    let mut buffer = vec![0; header.size_file];
-
-    match header.compress_method {
-        CompressMethod::Stored => {
-            file.read_exact(&mut buffer)?;
-        }
-        CompressMethod::Lzs => {
-            // Note: we don't use the extra decompression margin from the buffer, how it is done
-            // in the original source code.
-            let mut compressed_buffer = vec![0; header.compressed_size_file];
-            file.read_exact(&mut compressed_buffer)?;
-            decompress_lzs(&compressed_buffer, &mut buffer);
-        }
-    }
-
-    Ok(buffer)
+    Ok((file, header))
 }
 
 #[derive(Debug)]

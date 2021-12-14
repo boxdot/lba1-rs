@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::gamemenu::Game;
 use crate::lib3d::func::cross_mult_32;
 use crate::sdl_engine::{delay_ms, SdlEngine};
@@ -14,6 +16,18 @@ impl Default for Palette {
         Self {
             data: [0; PALETTE_WIDTH],
         }
+    }
+}
+
+impl TryFrom<Vec<u8>> for Palette {
+    type Error = io::Error;
+
+    fn try_from(data: Vec<u8>) -> io::Result<Self> {
+        Ok(Palette {
+            data: data
+                .try_into()
+                .map_err(|_| io::Error::new(io::ErrorKind::Other, "unexpected data size"))?,
+        })
     }
 }
 

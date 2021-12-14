@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use sdl2::pixels::{Color, Palette as SdlPalette, PixelFormatEnum};
+use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::surface::Surface;
 use sdl2::video::Window;
@@ -85,6 +86,34 @@ impl SdlEngine {
             .unwrap();
         self.buffer_surface
             .blit(None, &mut screen_surface, None)
+            .unwrap();
+        screen_surface.finish().unwrap();
+    }
+
+    pub fn copy_block_phys(&mut self, buf: &[u8], x0: u32, y0: u32, x1: u32, y1: u32) {
+        self.buffer_surface.with_lock_mut(|data| {
+            let offset = x0 as usize;
+            let len = x1.saturating_sub(x0) as usize;
+            for y in y0..y1 {
+                let line = (y * SCREEN_WIDTH) as usize;
+                data[line + offset..line + offset + len]
+                    .copy_from_slice(&buf[line + offset..line + offset + len]);
+            }
+        });
+        let mut screen_surface = self
+            .window_canvas
+            .window()
+            .surface(&self.event_pump)
+            .unwrap();
+
+        let rect = Rect::new(
+            x0 as i32,
+            y0 as i32,
+            x1.saturating_sub(x0),
+            y1.saturating_sub(y0),
+        );
+        self.buffer_surface
+            .blit(Some(rect), &mut screen_surface, Some(rect))
             .unwrap();
         screen_surface.finish().unwrap();
     }
